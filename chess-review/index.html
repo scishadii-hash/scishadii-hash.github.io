@@ -15,7 +15,7 @@
 <div class="board-actions"><button id="first">⏮</button><button id="prev">◀</button><button id="next">▶</button><button id="last">⏭</button><button id="flip">⇅ قلب</button></div></div>
 <div class="panel"><h2>النقلات</h2><div id="moves" class="moves"><span class="muted">استورد مباراة PGN لعرض النقلات هنا.</span></div></div></section>
 <aside><section class="panel" id="importPanel"><h2>استيراد مباراة</h2><textarea id="pgn" placeholder='الصق PGN هنا...&#10;[Event "Casual Game"]'></textarea><div class="row" style="margin-top:9px"><button class="primary" id="loadPgn">تحميل PGN</button><label class="filelabel"><button>رفع ملف PGN</button><input id="pgnFile" type="file" accept=".pgn,.txt"></label></div><div class="row" style="margin-top:9px"><input class="field" id="gameUrl" placeholder="رابط مباراة Chess.com"><button id="loadUrl">استيراد الرابط</button></div><p class="hint">استيراد الرابط يعتمد على إتاحة بيانات المباراة من المصدر. لو تعذّر جلبه، حمّل PGN من Chess.com والصقه هنا.</p><div id="importMsg" class="notice hidden"></div></section>
-<section class="panel"><h2>التقييم</h2><div class="row" style="justify-content:space-between"><b id="evalText">—</b><small class="muted" id="depth">Depth —</small></div><div class="eval"><div id="evalWhite" class="white"></div></div><canvas id="chart" class="chart"></canvas><div class="engine-line" id="bestLine">شغّل المحرك لتحليل الوضع الحالي.</div><button class="primary" id="analyze" style="width:100%;margin-top:10px">تحليل الوضع الحالي</button></section>
+<section class="panel"><h2>التقييم</h2><div class="row" style="justify-content:space-between"><b id="evalText">—</b><small class="muted" id="depth">Depth —</small></div><div class="eval"><div id="evalWhite" class="white"></div></div><canvas id="chart" class="chart"></canvas><div class="engine-line" id="bestLine">شغّل المحرك لتحليل الوضع الحالي.</div><button class="primary" id="analyze" style="width:100%;margin-top:10px">تحليل الوضع الحالي</button><button id="analyzeGame" style="width:100%;margin-top:8px">تحليل المباراة كاملة</button></section>
 <section class="panel"><h2>ملخص المباراة</h2><div class="stats"><div class="stat"><b id="whiteAcc">—</b><small>دقة الأبيض</small></div><div class="stat"><b id="blackAcc">—</b><small>دقة الأسود</small></div><div class="stat"><b id="moveCount">0</b><small>عدد النقلات</small></div><div class="stat"><b id="mistakes">—</b><small>أخطاء مكتشفة</small></div></div><p class="hint" id="reportHint">سيظهر التقرير بعد تحليل المباراة. الدقة وتصنيف Brilliant/Great يتطلبان تحليل كل نقلة.</p></section>
 <section class="panel hidden" id="playPanel"><h2>العب من الصفر</h2><div class="row"><label class="hint">اللون</label><select id="humanColor" class="field"><option value="white">أبيض</option><option value="black">أسود</option></select></div><div class="row" style="margin-top:8px"><label class="hint">مستوى المحرك</label><input id="level" type="range" min="1" max="20" value="5"><b id="levelValue">5</b></div><button id="newGame" class="primary" style="width:100%;margin-top:10px">لعبة جديدة</button><p class="hint">المربعات القانونية ستظهر عند اختيار قطعة. اضغط نقلة قانونية لتنفيذها.</p></section>
 </aside></div><div class="footer">Chess Review · تحليل محلي في المتصفح · Stockfish WebAssembly</div></main>
@@ -35,7 +35,58 @@ function setMsg(t,err=false){$('importMsg').textContent=t;$('importMsg').classLi
 function loadPGN(raw){try{const temp=new Chess();temp.loadPgn(raw,{strict:false});history=temp.history({verbose:true});index=0;ratings={white:'—',black:'—'};const headers=temp.getHeaders();$('topName').textContent=headers.Black||'الأسود';$('bottomName').textContent=headers.White||'الأبيض';ratings.black=headers.BlackElo||'—';ratings.white=headers.WhiteElo||'—';$('topRating').textContent=ratings.black;$('bottomRating').textContent=ratings.white;evals=[];render();setMsg('تم تحميل المباراة بنجاح: '+history.length+' نقلة.');$('reportHint').textContent='تم استيراد النقلات. شغّل تحليل المباراة لحساب الدقة والتصنيفات.'}catch(e){setMsg('تعذّر قراءة PGN: '+e.message,true)}}
 $('loadPgn').onclick=()=>loadPGN($('pgn').value);$('pgnFile').onchange=async e=>{const f=e.target.files[0];if(f) {$('pgn').value=await f.text();loadPGN($('pgn').value)}};
 $('loadUrl').onclick=async()=>{const u=$('gameUrl').value.trim();if(!/^https?:\/\/(www\.)?chess\.com\/game\//i.test(u)){setMsg('أدخل رابط مباراة Chess.com صحيحًا.',true);return}const m=u.match(/game\/(\d+)/);if(!m){setMsg('الرابط لا يحتوي على رقم مباراة واضح. استخدم ملف PGN.',true);return}try{const r=await fetch('https://www.chess.com/callback/live/game/'+m[1]);if(!r.ok)throw Error('المصدر لم يسمح بالوصول');const d=await r.json();const p=d.game?.pgn||d.pgn;if(!p)throw Error('لم يتم العثور على PGN');$('pgn').value=p;loadPGN(p)}catch(e){setMsg('تعذّر الاستيراد المباشر بسبب قيود المصدر أو نوع الرابط. حمّل PGN من Chess.com والصقه هنا.',true)}};
-function initEngine(){try{worker=new Worker('https://cdn.jsdelivr.net/npm/stockfish@17.1.0/src/stockfish-17.1-lite-single-03e3232.js');worker.onmessage=e=>{const line=String(e.data);if(line==='uciok'){worker.postMessage('isready')}if(line==='readyok'){engineReady=true;$('engineStatus').textContent='Stockfish متصل'}if(line.startsWith('info ')&&line.includes(' score ')){const s=line.match(/score (cp|mate) (-?\d+)/);if(s){let v=s[1]==='mate'?(Number(s[2])>0?10000:-10000):Number(s[2]);window.lastEval=v;const d=line.match(/depth (\d+)/);if(d)$('depth').textContent='Depth '+d[1]}}if(line.startsWith('bestmove ')){const uci=line.split(' ')[1];$('bestLine').textContent='أفضل نقلة: '+uci;if(view==='play'&&uci&&uci!=='(none)'){const g=new Chess(fenAt(index));const m=g.move({from:uci.slice(0,2),to:uci.slice(2,4),promotion:uci[4]||'q'});if(m){history=history.slice(0,index);history.push(m);index++;render()}}}};worker.onerror=()=>{$('engineStatus').textContent='تعذّر تحميل المحرك'};worker.postMessage('uci')}catch(e){$('engineStatus').textContent='المحرك غير متاح'}}
+function initEngine(){try{worker=new Worker('https://cdn.jsdelivr.net/npm/stockfish@17.1.0/src/stockfish-17.1-lite-single-03e3232.js');worker.onmessage=e=>{const line=String(e.data);if(line==='uciok'){worker.postMessage('isready')}if(line==='readyok'){engineReady=true;$('engineStatus').textContent='Stockfish متصل'}if(line.startsWith('info ')&&line.includes(' score ')){const s=line.match(/score (cp|mate) (-?\d+)/);if(s){let v=s[1]==='mate'?(Number(s[2])>0?10000:-10000):Number(s[2]);window.lastEval=v;const d=line.match(/depth (\d+)/);if(d)$('depth').textContent='Depth '+d[1]}}if(line.startsWith('bestmove ')){const uci=line.split(' ')[1];if(reviewJob){finishReviewStep();return}$('bestLine').textContent='أفضل نقلة: '+uci;if(view==='play'&&uci&&uci!=='(none)'){const g=new Chess(fenAt(index));const m=g.move({from:uci.slice(0,2),to:uci.slice(2,4),promotion:uci[4]||'q'});if(m){history=history.slice(0,index);history.push(m);index++;render()}}}};worker.onerror=()=>{$('engineStatus').textContent='تعذّر تحميل المحرك'};worker.postMessage('uci')}catch(e){$('engineStatus').textContent='المحرك غير متاح'}}
+
+let reviewJob=null;
+function scoreToWhiteCp(raw,turn){return turn==='w'?raw:-raw}
+function classifyLoss(loss,move,positionBefore){if(loss<0.35)return 'Best';if(loss<1.5)return 'Excellent';if(loss<3.5)return 'Good';if(loss<7)return 'Inaccuracy';if(loss<14)return 'Mistake';return 'Blunder'}
+function accuracyFromLoss(loss){return Math.max(0,Math.min(100,103.1668*Math.exp(-0.04354*Math.max(0,loss))-3.1669))}
+function finishReviewStep(){
+ const j=reviewJob;if(!j)return;
+ if(j.stage==='before'){
+  j.bestCp=scoreToWhiteCp(Number(window.lastEval||0),j.beforeTurn);
+  j.stage='after';worker.postMessage('position fen '+j.afterFen);worker.postMessage('go depth 10');return;
+ }
+ const afterCp=scoreToWhiteCp(Number(window.lastEval||0),j.afterTurn);
+ const moverWhite=j.beforeTurn==='w';const loss=Math.max(0,(moverWhite?j.bestCp-afterCp:afterCp-j.bestCp));
+ const label=classifyLoss(loss,j.move,j.beforeFen);
+ j.results.push({san:j.move.san,side:moverWhite?'white':'black',loss,label,accuracy:accuracyFromLoss(loss),bestmove:j.bestmove});
+ j.i++;
+ if(j.i>=j.moves.length){completeReview();return}
+ startReviewStep();
+}
+function startReviewStep(){
+ const j=reviewJob;if(!j)return;
+ const m=j.moves[j.i],before=new Chess();for(let k=0;k<j.i;k++)before.move(j.moves[k]);
+ const after=new Chess(before.fen());after.move(m);
+ j.move=m;j.beforeFen=before.fen();j.afterFen=after.fen();j.beforeTurn=before.turn();j.afterTurn=after.turn();j.stage='before';window.lastEval=0;
+ $('bestLine').textContent='تحليل النقلة '+(j.i+1)+' من '+j.moves.length+'...';
+ worker.postMessage('position fen '+j.beforeFen);worker.postMessage('go depth 10');
+}
+function completeReview(){
+ const r=reviewJob.results;reviewJob=null;
+ const sides=['white','black'];const acc={white:[],black:[]},counts={white:{},black:{}};
+ r.forEach(x=>{acc[x.side].push(x.accuracy);counts[x.side][x.label]=(counts[x.side][x.label]||0)+1});
+ const avg=x=>x.length?(x.reduce((a,b)=>a+b,0)/x.length).toFixed(1)+'%':'—';
+ $('whiteAcc').textContent=avg(acc.white);$('blackAcc').textContent=avg(acc.black);
+ const mistakes=r.filter(x=>['Inaccuracy','Mistake','Blunder'].includes(x.label)).length;
+ $('mistakes').textContent=mistakes;
+ $('reportHint').textContent='نتائج تحليل المحرك: '+r.map((x,i)=>(i+1)+'. '+x.san+' '+x.label+' (فقد '+x.loss.toFixed(1)+' نقطة مئوية)').join(' · ');
+ $('bestLine').textContent='اكتمل تحليل '+r.length+' نقلة. النتائج تقريبية وتعتمد على عمق المحرك.';
+ $('evalText').textContent='اكتمل التحليل';
+}
+function analyzeWholeGame(){
+ if(!history.length){setMsg('حمّل مباراة PGN أولًا.',true);return}
+ if(!engineReady){setMsg('انتظر اتصال Stockfish ثم أعد المحاولة.',true);return}
+ if(reviewJob)return;
+ reviewJob={moves:history.slice(),i:0,results:[],stage:'before'};
+ $('analyzeGame').disabled=true;
+ const done=()=>{$('analyzeGame').disabled=false};
+ const original=completeReview;
+ completeReview=function(){original();done();completeReview=original};
+ startReviewStep();
+}
+$('analyzeGame').onclick=analyzeWholeGame;
 function analyzePosition(show=true){if(!worker||!engineReady){if(show)setMsg('المحرك لم يجهز بعد. تحقق من الاتصال ثم أعد المحاولة.',true);return}worker.postMessage('stop');worker.postMessage('position fen '+fenAt(index));worker.postMessage('go depth 14')}
 $('analyze').onclick=()=>analyzePosition(true);initEngine();
 $('newGame').onclick=()=>{history=[];index=0;view='play';selected=null;legal=[];render();setMsg('بدأت لعبة جديدة. اختر قطعة ثم مربعًا قانونيًا.');const c=$('humanColor').value;if(c==='black'&&engineReady)maybeEngineMove()};
