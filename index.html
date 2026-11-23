@@ -8,6 +8,7 @@ body{margin:0;color:var(--ink);font:400 15px/1.5 Cairo,system-ui,sans-serif;font
 button,input{font:inherit;color:inherit}button{border:0;cursor:pointer;background:none}
 :focus-visible{outline:2px solid var(--or);outline-offset:2px}
 .wrap{max-width:640px;margin:auto;padding:14px 16px}
+.chess-link{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink);background:linear-gradient(110deg,#263725,#1b211b);border:1px solid #40553a;border-radius:14px;padding:11px 14px;margin:0 0 14px}.chess-link>span:first-child{font-size:27px;color:#a8d77a}.chess-link span:nth-child(2){display:flex;flex-direction:column;flex:1}.chess-link small{font-size:11px;color:var(--mu)}.chess-link strong{font-size:12px;color:#b9e292}
 .top{display:flex;justify-content:space-between;align-items:center;padding:6px 0 16px}
 .brand{font-weight:800;font-size:20px;letter-spacing:.5px}.brand i{color:var(--or);font-style:normal}
 .clock{font-size:13px;color:var(--mu);background:var(--p);border:1px solid var(--ln);border-radius:10px;padding:5px 10px}
@@ -74,6 +75,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 @media(prefers-reduced-motion:reduce){*,*:before{animation:none!important;transition:none!important}}
 </style></head><body><div class="wrap">
 <div class="top"><div><div class="brand">T<i>-TRACK</i></div><div class="lb">متابعة شغل الطيار</div></div><span class="clock" id="clock">--:--</span></div>
+<a class="chess-link" href="./chess-review/?v=87dc768" aria-label="فتح مراجعة الشطرنج"><span>♞</span><span><b>مراجع مباريات الشطرنج</b><small>تحليل النقلات ومراجعة PGN</small></span><strong>افتح ←</strong></a>
 
 <section class="page on" id="home">
 <div id="bk" class="banner hide"><span>عدّى أكتر من أسبوع من آخر نسخة احتياطية.</span><button onclick="go('settings')">خد نسخة</button></div>
