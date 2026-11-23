@@ -48,7 +48,7 @@ function finishReviewStep(){
   j.stage='after';worker.postMessage('position fen '+j.afterFen);worker.postMessage('go depth 10');return;
  }
  const afterCp=scoreToWhiteCp(Number(window.lastEval||0),j.afterTurn);
- const moverWhite=j.beforeTurn==='w';const loss=Math.max(0,(moverWhite?j.bestCp-afterCp:afterCp-j.bestCp));
+ const moverWhite=j.beforeTurn==='w';const winPct=cp=>100/(1+Math.exp(-0.00368208*cp));const loss=Math.max(0,moverWhite?winPct(j.bestCp)-winPct(afterCp):winPct(-j.bestCp)-winPct(-afterCp));
  const label=classifyLoss(loss,j.move,j.beforeFen);
  j.results.push({san:j.move.san,side:moverWhite?'white':'black',loss,label,accuracy:accuracyFromLoss(loss),bestmove:j.bestmove});
  j.i++;
@@ -71,7 +71,7 @@ function completeReview(){
  $('whiteAcc').textContent=avg(acc.white);$('blackAcc').textContent=avg(acc.black);
  const mistakes=r.filter(x=>['Inaccuracy','Mistake','Blunder'].includes(x.label)).length;
  $('mistakes').textContent=mistakes;
- $('reportHint').textContent='نتائج تحليل المحرك: '+r.map((x,i)=>(i+1)+'. '+x.san+' '+x.label+' (فقد '+x.loss.toFixed(1)+' نقطة مئوية)').join(' · ');
+ const summary=['Best','Excellent','Good','Inaccuracy','Mistake','Blunder'].map(k=>k+': '+r.filter(x=>x.label===k).length).join(' | ');$('reportHint').textContent='ملخص التصنيفات: '+summary+' — '+r.map((x,i)=>(i+1)+'. '+x.san+' '+x.label+' (فقد '+x.loss.toFixed(1)+' نقطة مئوية)').join(' · ');
  $('bestLine').textContent='اكتمل تحليل '+r.length+' نقلة. النتائج تقريبية وتعتمد على عمق المحرك.';
  $('evalText').textContent='اكتمل التحليل';
 }
